@@ -1,0 +1,92 @@
+﻿@page "/productos"
+@rendermode InteractiveServer
+@using ProductosCURD.Models
+@using ProductosCURD.Services 
+@inject GestorProductos Gestor
+
+<h3>Productos</h3>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>Agregar Nuevo Producto</h5>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Nombre:</label>
+                <input type="text" class="form-control" placeholder="Nombre del producto"
+                       @bind-value="nuevoProducto.Nombre" />
+            </div>
+            <div class="col">
+                <label class="form-label">Precio:</label>
+                <input type="number" class="form-control" placeholder="Precio"
+                       @bind-value="nuevoProducto.Precio" />
+            </div>
+            <div class="col">
+                <label class="form-label">Stock:</label>
+                <input type="number" class="form-control" placeholder="Stock"
+                       @bind-value="nuevoProducto.Stock" />
+            </div>  
+        </div>
+        <button class="btn btn-success mt-2" @onclick="GuardarProducto">
+            Agregar +
+        </button>
+    </div>
+</div>
+
+@if (productos is null)
+{
+    <p>Cargando...</p>
+}
+else if(productos.Count == 0)
+{
+    <p>No hay productos aun agregados</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Precio</th>
+                <th scope="col">Stock</th>
+                <th scope="col">Disponible</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var producto in productos)
+            {
+            <tr>
+                <th scope="row">@producto.Id</th>
+                <td>@producto.Nombre</td>
+                <td>@producto.Precio</td>
+                <td>@producto.Stock</td>
+                <td>@(producto.Disponible ? "Disponible" : "No disponible")</td>
+            </tr>
+                
+            }
+        </tbody>
+    </table>
+}
+@code {
+    private List<Producto> productos = new();
+    Producto nuevoProducto = new();
+    protected override void OnInitialized()
+    {
+        productos = Gestor.ObtenerProductos();
+    }
+    private void CargarProductos()
+    {
+        productos = Gestor.ObtenerProductos();
+    }
+    private void GuardarProducto()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoProducto.Nombre)) return;
+
+        Gestor.AgregarProducto(nuevoProducto);
+
+        nuevoProducto = new Producto();
+
+        CargarProductos();
+    }
+
+}
