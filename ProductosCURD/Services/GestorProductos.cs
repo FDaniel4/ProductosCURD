@@ -44,6 +44,7 @@ namespace ProductosCURD.Services
             productoenBD.Nombre = productoeditado.Nombre;
             productoenBD.Precio = productoeditado.Precio;
             productoenBD.Stock = productoeditado.Stock;
+            productoenBD.Disponible = productoeditado.Disponible;
             _context.SaveChanges();
             return true;
         } 

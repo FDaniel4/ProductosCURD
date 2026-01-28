@@ -4,6 +4,16 @@
 @using ProductosCURD.Services 
 @inject GestorProductos Gestor
 
+@if (!string.IsNullOrEmpty(mensajeError))
+{
+    <div class="alert alert-danger">@mensajeError</div>
+}
+
+@if (!string.IsNullOrEmpty(mensajeOk))
+{
+    <div class="alert alert-success">@mensajeOk</div>
+}
+
 <h3>Productos</h3>
 
 <div class="card mb-4">
@@ -39,6 +49,41 @@
         </div>
     </div>
 </div>
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Buscar por nombre</label>
+                <input class="form-control"
+                       placeholder="Ej. Laptop"
+                       @bind="filtroNombre"
+                       @oninput="AplicarFiltros" />
+            </div>
+
+            <div class="col-md-3">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox"
+                           @bind="soloDisponibles"
+                           @bind:after="AplicarFiltros" />
+                    <label class="form-check-label">
+                        Solo disponibles
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox"
+                           @bind="soloSinStock"
+                           @bind:after="AplicarFiltros" />
+                    <label class="form-check-label">
+                        Sin stock
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (productos is null)
 {
@@ -62,7 +107,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach(var producto in productos)
+            @foreach(var producto in productosFiltrados)
             {
             <tr>
                 <td scope="row">@producto.Id</td>
@@ -79,10 +124,19 @@ else
     </table>
 }
 @code {
+    private string? mensajeError;
+    private string? mensajeOk;
+    private List<Producto> productosFiltrados = new();
+
     private bool editando = false;
 
     private List<Producto> productos = new();
     Producto nuevoProducto = new();
+
+    private string filtroNombre = string.Empty;
+    private bool soloDisponibles = false;
+    private bool soloSinStock = false;
+
     protected override void OnInitialized()
     {
         productos = Gestor.ObtenerProductos();
@@ -90,29 +144,38 @@ else
     private void CargarProductos()
     {
         productos = Gestor.ObtenerProductos();
+        AplicarFiltros();
     }
     private void GuardarProducto()
     {
+        if (!ValidarProducto())
+            return;
+
         if (string.IsNullOrWhiteSpace(nuevoProducto.Nombre)) return;
+        nuevoProducto.Disponible = nuevoProducto.Stock > 0;
+
         if (editando)
         {
             var actualizado = Gestor.EditarProducto(nuevoProducto);
             if (actualizado)
             {
+                mensajeOk = "Producto actualizado correctamente";
                 editando = false;
                 nuevoProducto = new Producto();
                 CargarProductos();
             }
             else
             {
-                Gestor.AgregarProducto(nuevoProducto);
-
-                nuevoProducto = new Producto();
-
-                CargarProductos();
             }
         }
-
+        else
+        {
+            mensajeOk = "Producto agregado correctamente";
+            Gestor.AgregarProducto(nuevoProducto);
+            nuevoProducto = new Producto();
+            CargarProductos();
+            
+        }
     }
     private void EliminarProducto(int id)
     {
@@ -136,8 +199,7 @@ else
                 Id = producto.Id,
                 Nombre = producto.Nombre,
                 Precio = producto.Precio,
-                Stock = producto.Stock,
-                Disponible = producto.Disponible
+                Stock = producto.Stock
             };
         editando = true;
     }
@@ -146,5 +208,44 @@ else
         editando = false;
         nuevoProducto = new Producto();
     }
+    private bool ValidarProducto()
+    {
+        mensajeError = null;
+        mensajeOk = null;
+
+        if (string.IsNullOrWhiteSpace(nuevoProducto.Nombre))
+        {
+            mensajeError = "El nombre del producto es obligatorio";
+            return false;
+        }
+
+        if (nuevoProducto.Precio <= 0)
+        {
+            mensajeError = "El precio debe ser mayor a 0";
+            return false;
+        }
+
+        if (nuevoProducto.Stock < 0)
+        {
+            mensajeError = "El stock no puede ser negativo";
+            return false;
+        }
+
+        return true;
+    }
+    private void AplicarFiltros()
+    {
+        productosFiltrados = productos
+            .Where(p =>
+                (string.IsNullOrWhiteSpace(filtroNombre)
+                 || p.Nombre.Contains(filtroNombre, StringComparison.OrdinalIgnoreCase))
+                &&
+                (!soloDisponibles || p.Disponible)
+                &&
+                (!soloSinStock || p.Stock == 0)
+            )
+            .ToList();
+    }
+
 
 }
