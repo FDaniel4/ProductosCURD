@@ -8,7 +8,7 @@
 
 <div class="card mb-4">
     <div class="card-body">
-        <h5>Agregar Nuevo Producto</h5>
+        <h5>@(editando ? "Editar Producto" : "Agregar Nuevo Producto")</h5>
         <div class="row">
             <div class="col">
                 <label class="form-label">Nombre:</label>
@@ -26,9 +26,17 @@
                        @bind-value="nuevoProducto.Stock" />
             </div>  
         </div>
-        <button class="btn btn-success mt-2" @onclick="GuardarProducto">
-            Agregar +
-        </button>
+        <div class="mt-2">
+            @if (editando)
+            {
+                <button class="btn btn-primary me-2" @onclick="GuardarProducto">Actualizar</button>
+                <button class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+            }
+            else
+            {
+                <button class="btn btn-success" @onclick="GuardarProducto">Agregar +</button>
+            }
+        </div>
     </div>
 </div>
 
@@ -42,7 +50,7 @@ else if(productos.Count == 0)
 }
 else
 {
-    <table class="table">
+    <table class="table table-striped-columns">
         <thead>
             <tr>
                 <th scope="col">ID</th>
@@ -50,24 +58,29 @@ else
                 <th scope="col">Precio</th>
                 <th scope="col">Stock</th>
                 <th scope="col">Disponible</th>
+                <th scope="col">Acciones</th>
             </tr>
         </thead>
         <tbody>
             @foreach(var producto in productos)
             {
             <tr>
-                <th scope="row">@producto.Id</th>
+                <td scope="row">@producto.Id</td>
                 <td>@producto.Nombre</td>
                 <td>@producto.Precio</td>
                 <td>@producto.Stock</td>
                 <td>@(producto.Disponible ? "Disponible" : "No disponible")</td>
+                <td class="text-center align-middle" style="width: 110px;">
+                        <button type="button" class="btn btn-danger btn-sm" @onclick="() => EliminarProducto(producto.Id)"><i class="bi bi-trash"></i></button>
+                    <button type="button" class="btn btn-warning btn-sm" @onclick="() => EditarProducto(producto.Id)"><i class="bi bi-pencil-square"></i></button></td>
             </tr>
-                
             }
         </tbody>
     </table>
 }
 @code {
+    private bool editando = false;
+
     private List<Producto> productos = new();
     Producto nuevoProducto = new();
     protected override void OnInitialized()
@@ -81,12 +94,57 @@ else
     private void GuardarProducto()
     {
         if (string.IsNullOrWhiteSpace(nuevoProducto.Nombre)) return;
+        if (editando)
+        {
+            var actualizado = Gestor.EditarProducto(nuevoProducto);
+            if (actualizado)
+            {
+                editando = false;
+                nuevoProducto = new Producto();
+                CargarProductos();
+            }
+            else
+            {
+                Gestor.AgregarProducto(nuevoProducto);
 
-        Gestor.AgregarProducto(nuevoProducto);
+                nuevoProducto = new Producto();
 
+                CargarProductos();
+            }
+        }
+
+    }
+    private void EliminarProducto(int id)
+    {
+        var eliminado = Gestor.EliminarProducto(id);
+        if (eliminado)
+        {
+            CargarProductos();
+        }
+        else
+        {
+
+        }
+    }
+    private void EditarProducto(int id)
+    {
+        var producto = productos.FirstOrDefault(p => p.Id == id);
+        if (producto is null) return;
+
+        nuevoProducto = new Producto
+            {
+                Id = producto.Id,
+                Nombre = producto.Nombre,
+                Precio = producto.Precio,
+                Stock = producto.Stock,
+                Disponible = producto.Disponible
+            };
+        editando = true;
+    }
+    private void CancelarEdicion()
+    {
+        editando = false;
         nuevoProducto = new Producto();
-
-        CargarProductos();
     }
 
 }
